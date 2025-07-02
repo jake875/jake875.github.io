@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cabinet Hero</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/GLTFLoader.js"></script>
+
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: #121212;
+      font-family: Georgia, serif;
+      overflow: hidden;
+    }
+
+    #cabinet-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    #cabinetCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 10%;
+      left: 5%;
+      color: #f4f1ec;
+      z-index: 10;
+    }
+
+    .overlay h1 {
+      font-size: 3em;
+      color: #e9c46a;
+      margin: 0;
+      text-shadow: 0 0 10px rgba(233,196,106,0.3);
+    }
+
+    .overlay p {
+      font-size: 1.2em;
+      margin-top: 1em;
+      max-width: 400px;
+    }
+
+    #loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #f4f1ec;
+      font-size: 1.2em;
+      z-index: 15;
+      text-align: center;
+    }
+
+    .spinner {
+      border: 4px solid rgba(255,255,255,0.1);
+      border-top: 4px solid #e9c46a;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="cabinet-container">
+    <div class="overlay">
+      <h1>Crafted to Perfection</h1>
+      <p>Bespoke cabinetry that blends <span style="color:#e9c46a;">timeless beauty</span> with modern artistry.</p>
+    </div>
+
+    <div id="loading">
+      <div class="spinner"></div>
+      Loading cabinet...
+    </div>
+
+    <canvas id="cabinetCanvas"></canvas>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('cabinetCanvas');
+    const container = document.getElementById('cabinet-container');
+    const loading = document.getElementById('loading');
+
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.outputEncoding = THREE.sRGBEncoding;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(35, container.clientWidth / container.clientHeight, 0.1, 100);
+    camera.position.set(0, 1.5, 4);
+
+    // Lights
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    keyLight.position.set(3, 4, 5);
+    scene.add(keyLight);
+
+    // Load Cabinet
+    const loader = new THREE.GLTFLoader();
+    loader.load('https://files.catbox.moe/llzqd9.glb', function(gltf) {
+      const model = gltf.scene;
+      const box = new THREE.Box3().setFromObject(model);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const scale = 2.5 / maxDim;
+
+      model.scale.setScalar(scale);
+      model.position.sub(center.multiplyScalar(scale));
+
+      scene.add(model);
+      loading.style.display = 'none';
+      animate();
+    }, undefined, function(error) {
+      console.error('Error loading cabinet model:', error);
+      loading.innerHTML = 'Failed to load cabinet.';
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+
+    new ResizeObserver(() => {
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    }).observe(container);
+  </script>
+</body>
+</html>
