@@ -114,7 +114,7 @@
 
     // Load Cabinet
     const loader = new THREE.GLTFLoader();
-    loader.load('https://files.catbox.moe/llzqd9.glb', function(gltf) {
+    loader.load('llzqd9.glb', function (gltf) {
       const model = gltf.scene;
       const box = new THREE.Box3().setFromObject(model);
       const center = box.getCenter(new THREE.Vector3());
