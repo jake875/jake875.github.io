@@ -88,15 +88,21 @@
     <canvas id="cabinetCanvas"></canvas>
   </div>
 
-  <script type="module">
-    import * as THREE from 'https://unpkg.com/three@0.150.1/build/three.module.js';
-    import { GLTFLoader } from 'https://unpkg.com/three@0.150.1/examples/jsm/loaders/GLTFLoader.js';
-
+  <!-- Load Three.js from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/GLTFLoader.min.js"></script>
+  
+  <script>
     const canvas = document.getElementById('cabinetCanvas');
     const loading = document.getElementById('loading');
     const container = document.getElementById('cabinet-container');
 
-    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    // Initialize Three.js
+    const renderer = new THREE.WebGLRenderer({ 
+      canvas, 
+      alpha: true, 
+      antialias: true 
+    });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.outputEncoding = THREE.sRGBEncoding;
@@ -111,12 +117,24 @@
     light.position.set(2, 5, 5);
     scene.add(light);
 
+    // Add mouse movement effect
+    let cabinetModel;
+    let mouseX = 0;
+    let mouseY = 0;
+    
+    document.addEventListener('mousemove', (event) => {
+      mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+      mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+    });
+
     // Load the GLB model
-    const loader = new GLTFLoader();
+    const loader = new THREE.GLTFLoader();
     loader.load(
-      './A_luxurious_photorea_0701194007_texture.glb',
+      'https://jake875.github.io/A_luxurious_photorea_0701194007_texture.glb',
       (gltf) => {
         const model = gltf.scene;
+        cabinetModel = model; // Store for rotation
+        
         const box = new THREE.Box3().setFromObject(model);
         const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
@@ -130,15 +148,25 @@
         loading.style.display = 'none';
         animate();
       },
-      undefined,
+      (xhr) => {
+        // Progress callback
+        console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+      },
       (error) => {
         console.error('Failed to load model:', error);
-        loading.innerHTML = 'Failed to load cabinet model.';
+        loading.innerHTML = 'Failed to load cabinet model. Please refresh or check console for errors.';
       }
     );
 
     function animate() {
       requestAnimationFrame(animate);
+      
+      // Rotate model based on mouse position
+      if (cabinetModel) {
+        cabinetModel.rotation.y = mouseX * 0.2;
+        cabinetModel.rotation.x = mouseY * 0.1;
+      }
+      
       renderer.render(scene, camera);
     }
 
@@ -149,6 +177,28 @@
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
     });
+
+    // Add scroll interaction
+    let targetRotation = 0;
+    window.addEventListener('scroll', () => {
+      targetRotation = window.scrollY * 0.005;
+    });
+
+    // Update animation to include scroll rotation
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      if (cabinetModel) {
+        // Combine mouse and scroll effects
+        cabinetModel.rotation.y = mouseX * 0.2 + targetRotation;
+        cabinetModel.rotation.x = mouseY * 0.1;
+        
+        // Smooth the scroll rotation
+        targetRotation *= 0.95;
+      }
+      
+      renderer.render(scene, camera);
+    }
   </script>
 </body>
 </html>
