@@ -4,10 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Cabinet Hero</title>
-
-  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/GLTFLoader.js"></script>
-
   <style>
     html, body {
       margin: 0;
@@ -92,7 +88,11 @@
     <canvas id="cabinetCanvas"></canvas>
   </div>
 
-  <script>
+  <!-- Three.js and GLTFLoader using ES Modules -->
+  <script type="module">
+    import * as THREE from 'https://unpkg.com/three@0.150.1/build/three.module.js';
+    import { GLTFLoader } from 'https://unpkg.com/three@0.150.1/examples/jsm/loaders/GLTFLoader.js';
+
     const canvas = document.getElementById('cabinetCanvas');
     const container = document.getElementById('cabinet-container');
     const loading = document.getElementById('loading');
@@ -106,17 +106,17 @@
     const camera = new THREE.PerspectiveCamera(35, container.clientWidth / container.clientHeight, 0.1, 100);
     camera.position.set(0, 1.5, 4);
 
-    // Lights
     scene.add(new THREE.AmbientLight(0xffffff, 0.6));
     const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
     keyLight.position.set(3, 4, 5);
     scene.add(keyLight);
 
-    // Load Cabinet
-    const loader = new THREE.GLTFLoader();
-    loader.load('https://jake875.github.io/A_luxurious_photorea_0701194007_texture.glb', function (gltf) {
-
+    // Load the GLB file (ensure it is in the same directory as index.html)
+    const loader = new GLTFLoader();
+    loader.load('A_luxurious_photorea_0701194007_texture.glb', function (gltf) {
       const model = gltf.scene;
+
+      // Center and scale model
       const box = new THREE.Box3().setFromObject(model);
       const center = box.getCenter(new THREE.Vector3());
       const size = box.getSize(new THREE.Vector3());
@@ -129,7 +129,7 @@
       scene.add(model);
       loading.style.display = 'none';
       animate();
-    }, undefined, function(error) {
+    }, undefined, function (error) {
       console.error('Error loading cabinet model:', error);
       loading.innerHTML = 'Failed to load cabinet.';
     });
