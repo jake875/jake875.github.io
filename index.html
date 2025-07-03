@@ -141,15 +141,15 @@
     let mouseY = 0;
     let targetRotation = 0;
 
-    // Mouse movement handler
+    // More aggressive mouse movement handler
     document.addEventListener('mousemove', (event) => {
       mouseX = (event.clientX / window.innerWidth) * 2 - 1;
       mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
     });
 
-    // Scroll handler
+    // More aggressive scroll handler
     window.addEventListener('scroll', () => {
-      targetRotation = window.scrollY * 0.005;
+      targetRotation = window.scrollY * 0.01; // Increased from 0.005 to 0.01
     });
 
     // Load the GLB model
@@ -184,15 +184,18 @@
       }
     );
 
-    // Animation loop
+    // Animation loop with more aggressive movement
     function animate() {
       requestAnimationFrame(animate);
       controls.update();
       
       if (cabinetModel) {
-        cabinetModel.rotation.y = mouseX * 0.2 + targetRotation;
-        cabinetModel.rotation.x = mouseY * 0.1;
-        targetRotation *= 0.95; // Smooth scroll rotation
+        // Increased rotation multipliers from 0.2/0.1 to 0.4/0.2 for more aggressive movement
+        cabinetModel.rotation.y = mouseX * 0.4 + targetRotation; // Increased from 0.2
+        cabinetModel.rotation.x = mouseY * 0.2; // Increased from 0.1
+        
+        // Reduced damping for more responsive movement
+        targetRotation *= 0.9; // Changed from 0.95 for less smoothing
       }
       
       renderer.render(scene, camera);
