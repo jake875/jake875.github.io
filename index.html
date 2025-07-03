@@ -11,8 +11,7 @@
       height: 100%;
       font-family: 'Georgia', serif;
       background: #121212;
-      overflow: hidden;
-      touch-action: none;
+      overflow-x: hidden;
       -webkit-touch-callout: none;
       -webkit-user-select: none;
       user-select: none;
@@ -28,7 +27,14 @@
       display: block;
       width: 100%;
       height: 100%;
-      touch-action: none;
+    }
+
+    /* Desktop-only right shift */
+    @media (min-width: 769px) {
+      canvas {
+        position: relative;
+        left: 30px; /* ~1 inch right shift */
+      }
     }
 
     .overlay {
@@ -88,6 +94,11 @@
       .overlay h1 {
         margin-bottom: 0.5em;
       }
+      
+      /* Mobile touch area restriction */
+      canvas {
+        touch-action: none;
+      }
     }
   </style>
 </head>
@@ -144,7 +155,10 @@
     // Scene setup
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100);
-    camera.position.set(0, isMobile ? 1.2 : 1.5, isMobile ? 5 : 4);
+    
+    // Desktop: Position camera with right offset (~1 inch)
+    // Mobile: Center camera
+    camera.position.set(isMobile ? 0 : 0.5, isMobile ? 1.2 : 1.5, isMobile ? 5 : 4);
 
     // Lighting
     scene.add(new THREE.AmbientLight(0xffffff, isMobile ? 0.8 : 0.6));
@@ -152,7 +166,7 @@
     directionalLight.position.set(2, 5, 5);
     scene.add(directionalLight);
 
-    // Controls - more damped on mobile
+    // Controls
     const controls = new OrbitControls(camera, canvas);
     controls.enableDamping = true;
     controls.dampingFactor = isMobile ? 0.3 : 0.25;
@@ -164,8 +178,7 @@
     let mouseX = 0;
     let mouseY = 0;
     let targetRotation = 0;
-    let touchStartX = 0;
-    let touchStartY = 0;
+    let isDraggingCabinet = false;
 
     // Mouse movement handler (desktop)
     if (!isMobile) {
@@ -175,29 +188,39 @@
       });
     }
 
-    // Touch handlers (mobile)
+    // Mobile touch handlers
     if (isMobile) {
-      document.addEventListener('touchstart', (event) => {
-        touchStartX = event.touches[0].clientX;
-        touchStartY = event.touches[0].clientY;
-      }, { passive: true });
-
-      document.addEventListener('touchmove', (event) => {
-        event.preventDefault();
-        const touchX = event.touches[0].clientX;
-        const touchY = event.touches[0].clientY;
+      const cabinetRect = canvas.getBoundingClientRect();
+      
+      canvas.addEventListener('touchstart', (e) => {
+        // Only respond to touches directly on the cabinet
+        const touchX = e.touches[0].clientX;
+        const touchY = e.touches[0].clientY;
         
-        mouseX = (touchX / window.innerWidth) * 2 - 1;
-        mouseY = -(touchY / window.innerHeight) * 2 + 1;
-        
-        // Additional rotation based on movement delta
-        targetRotation += (touchX - touchStartX) * 0.005;
-        touchStartX = touchX;
-        touchStartY = touchY;
+        if (touchX >= cabinetRect.left && touchX <= cabinetRect.right &&
+            touchY >= cabinetRect.top && touchY <= cabinetRect.bottom) {
+          isDraggingCabinet = true;
+          e.preventDefault();
+        }
       }, { passive: false });
+
+      canvas.addEventListener('touchmove', (e) => {
+        if (isDraggingCabinet) {
+          const touchX = e.touches[0].clientX;
+          const touchY = e.touches[0].clientY;
+          
+          mouseX = (touchX / window.innerWidth) * 2 - 1;
+          mouseY = -(touchY / window.innerHeight) * 2 + 1;
+          e.preventDefault();
+        }
+      }, { passive: false });
+
+      canvas.addEventListener('touchend', () => {
+        isDraggingCabinet = false;
+      });
     }
 
-    // Scroll handler (less aggressive on mobile)
+    // Scroll handler
     window.addEventListener('scroll', () => {
       targetRotation = window.scrollY * (isMobile ? 0.005 : 0.01);
     });
@@ -221,9 +244,11 @@
         
         // Apply 50% reduction ONLY for mobile
         if (isMobile) {
-          scale *= 0.5; // 50% of original size on mobile
+          scale *= 0.5;
         } else {
-          scale *= 0.75; // 75% of original size on desktop (as previously requested)
+          scale *= 0.75;
+          // Desktop-only: Shift model right by ~1 inch in 3D space
+          model.position.x += 0.5;
         }
 
         model.scale.setScalar(scale);
@@ -233,29 +258,25 @@
         loading.style.display = 'none';
         animate();
       },
-      (xhr) => {
-        console.log(`${(xhr.loaded / xhr.total * 100).toFixed(2)}% loaded`);
-      },
+      undefined,
       (error) => {
         console.error('Error loading model:', error);
         loading.innerHTML = 'Error loading cabinet. Please check console.';
       }
     );
 
-    // Animation loop with mobile optimizations
+    // Animation loop
     function animate() {
       requestAnimationFrame(animate);
       controls.update();
       
       if (cabinetModel) {
-        // Different sensitivity for mobile vs desktop
         const rotationSensitivity = isMobile ? 0.3 : 0.4;
         const verticalSensitivity = isMobile ? 0.15 : 0.2;
         
         cabinetModel.rotation.y = mouseX * rotationSensitivity + targetRotation;
         cabinetModel.rotation.x = mouseY * verticalSensitivity;
         
-        // Different damping for mobile
         targetRotation *= isMobile ? 0.92 : 0.9;
       }
       
@@ -270,7 +291,6 @@
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       
-      // Adjust camera position for mobile landscape
       if (isMobile && window.innerWidth > window.innerHeight) {
         camera.position.z = 6;
       } else if (isMobile) {
@@ -279,14 +299,7 @@
     }
 
     window.addEventListener('resize', handleResize);
-    handleResize(); // Initial call
-
-    // Prevent touch scroll
-    document.addEventListener('touchmove', function(e) {
-      if (e.target === canvas) {
-        e.preventDefault();
-      }
-    }, { passive: false });
+    handleResize();
   </script>
 </body>
 </html>
