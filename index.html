@@ -88,7 +88,7 @@
     <canvas id="cabinetCanvas"></canvas>
   </div>
 
-  <!-- Three.js and GLTFLoader using ES Modules -->
+  <!-- ✅ Modern ES Modules -->
   <script type="module">
     import * as THREE from 'https://unpkg.com/three@0.150.1/build/three.module.js';
     import { GLTFLoader } from 'https://unpkg.com/three@0.150.1/examples/jsm/loaders/GLTFLoader.js';
@@ -111,12 +111,12 @@
     keyLight.position.set(3, 4, 5);
     scene.add(keyLight);
 
-    // Load the GLB file (ensure it is in the same directory as index.html)
+    // 🔽 Change this to the actual model filename in your repo
     const loader = new GLTFLoader();
     loader.load('A_luxurious_photorea_0701194007_texture.glb', function (gltf) {
       const model = gltf.scene;
 
-      // Center and scale model
+      // Center & scale
       const box = new THREE.Box3().setFromObject(model);
       const center = box.getCenter(new THREE.Vector3());
       const size = box.getSize(new THREE.Vector3());
@@ -130,7 +130,7 @@
       loading.style.display = 'none';
       animate();
     }, undefined, function (error) {
-      console.error('Error loading cabinet model:', error);
+      console.error('Error loading model:', error);
       loading.innerHTML = 'Failed to load cabinet.';
     });
 
