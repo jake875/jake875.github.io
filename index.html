@@ -160,12 +160,12 @@
         const model = gltf.scene;
         cabinetModel = model;
         
-        // Center and scale the model
+        // Center and scale the model (25% smaller than original version)
         const box = new THREE.Box3().setFromObject(model);
         const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
         const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 2.5 / maxDim;
+        const scale = (2.5 / maxDim) * 0.75; // 25% smaller (0.75 of original scale)
 
         model.scale.setScalar(scale);
         model.position.sub(center.multiplyScalar(scale));
