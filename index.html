@@ -79,7 +79,6 @@
       100% { transform: rotate(360deg); }
     }
 
-    /* Mobile-specific adjustments */
     @media (max-width: 768px) {
       .overlay {
         top: 5%;
@@ -203,7 +202,7 @@
       targetRotation = window.scrollY * (isMobile ? 0.005 : 0.01);
     });
 
-    // Load the GLB model
+    // Load the GLB model with mobile-specific scaling
     const loader = new GLTFLoader();
     loader.load(
       'https://jake875.github.io/A_luxurious_photorea_0701194007_texture.glb',
@@ -211,12 +210,21 @@
         const model = gltf.scene;
         cabinetModel = model;
         
-        // Center and scale the model (smaller on mobile)
+        // Center and scale the model
         const box = new THREE.Box3().setFromObject(model);
         const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
         const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = (isMobile ? 2.0 : 2.5) / maxDim * 0.75; // 25% smaller than original
+        
+        // Base scale calculation
+        let scale = 2.5 / maxDim;
+        
+        // Apply 50% reduction ONLY for mobile
+        if (isMobile) {
+          scale *= 0.5; // 50% of original size on mobile
+        } else {
+          scale *= 0.75; // 75% of original size on desktop (as previously requested)
+        }
 
         model.scale.setScalar(scale);
         model.position.sub(center.multiplyScalar(scale));
@@ -226,7 +234,6 @@
         animate();
       },
       (xhr) => {
-        // Loading progress
         console.log(`${(xhr.loaded / xhr.total * 100).toFixed(2)}% loaded`);
       },
       (error) => {
