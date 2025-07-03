@@ -114,7 +114,8 @@
 
     // Load Cabinet
     const loader = new THREE.GLTFLoader();
-    loader.load('A_luxurious_photorea_0701194007_texture.glb', function (gltf) {
+    loader.load('https://jake875.github.io/A_luxurious_photorea_0701194007_texture.glb', function (gltf) {
+
       const model = gltf.scene;
       const box = new THREE.Box3().setFromObject(model);
       const center = box.getCenter(new THREE.Vector3());
