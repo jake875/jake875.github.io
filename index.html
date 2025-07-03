@@ -88,11 +88,13 @@
     <canvas id="cabinetCanvas"></canvas>
   </div>
 
-  <!-- Load Three.js from CDN -->
+  <!-- Load Three.js from CDN using the new recommended approach -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/GLTFLoader.min.js"></script>
-  
-  <script>
+  <!-- Load GLTFLoader as a module -->
+  <script type="module">
+    // Import GLTFLoader from the correct path
+    import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/loaders/GLTFLoader.js';
+
     const canvas = document.getElementById('cabinetCanvas');
     const loading = document.getElementById('loading');
     const container = document.getElementById('cabinet-container');
@@ -121,14 +123,20 @@
     let cabinetModel;
     let mouseX = 0;
     let mouseY = 0;
+    let targetRotation = 0;
     
     document.addEventListener('mousemove', (event) => {
       mouseX = (event.clientX / window.innerWidth) * 2 - 1;
       mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
     });
 
+    // Add scroll interaction
+    window.addEventListener('scroll', () => {
+      targetRotation = window.scrollY * 0.005;
+    });
+
     // Load the GLB model
-    const loader = new THREE.GLTFLoader();
+    const loader = new GLTFLoader();
     loader.load(
       'https://jake875.github.io/A_luxurious_photorea_0701194007_texture.glb',
       (gltf) => {
@@ -161,10 +169,13 @@
     function animate() {
       requestAnimationFrame(animate);
       
-      // Rotate model based on mouse position
+      // Rotate model based on mouse position and scroll
       if (cabinetModel) {
-        cabinetModel.rotation.y = mouseX * 0.2;
+        cabinetModel.rotation.y = mouseX * 0.2 + targetRotation;
         cabinetModel.rotation.x = mouseY * 0.1;
+        
+        // Smooth the scroll rotation
+        targetRotation *= 0.95;
       }
       
       renderer.render(scene, camera);
@@ -177,28 +188,6 @@
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
     });
-
-    // Add scroll interaction
-    let targetRotation = 0;
-    window.addEventListener('scroll', () => {
-      targetRotation = window.scrollY * 0.005;
-    });
-
-    // Update animation to include scroll rotation
-    function animate() {
-      requestAnimationFrame(animate);
-      
-      if (cabinetModel) {
-        // Combine mouse and scroll effects
-        cabinetModel.rotation.y = mouseX * 0.2 + targetRotation;
-        cabinetModel.rotation.x = mouseY * 0.1;
-        
-        // Smooth the scroll rotation
-        targetRotation *= 0.95;
-      }
-      
-      renderer.render(scene, camera);
-    }
   </script>
 </body>
 </html>
