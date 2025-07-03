@@ -88,18 +88,28 @@
     <canvas id="cabinetCanvas"></canvas>
   </div>
 
-  <!-- Load Three.js from CDN using the new recommended approach -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
-  <!-- Load GLTFLoader as a module -->
-  <script type="module">
-    // Import GLTFLoader from the correct path
-    import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/loaders/GLTFLoader.js';
+  <!-- Import Map for Three.js -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/"
+      }
+    }
+  </script>
 
+  <!-- Main Application Code -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // Initialize the scene
     const canvas = document.getElementById('cabinetCanvas');
     const loading = document.getElementById('loading');
     const container = document.getElementById('cabinet-container');
 
-    // Initialize Three.js
+    // Renderer setup
     const renderer = new THREE.WebGLRenderer({ 
       canvas, 
       alpha: true, 
@@ -109,28 +119,35 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.outputEncoding = THREE.sRGBEncoding;
 
+    // Scene setup
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100);
     camera.position.set(0, 1.5, 4);
 
     // Lighting
     scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(2, 5, 5);
-    scene.add(light);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(2, 5, 5);
+    scene.add(directionalLight);
 
-    // Add mouse movement effect
+    // Controls for debugging
+    const controls = new OrbitControls(camera, canvas);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.25;
+
+    // Model interaction variables
     let cabinetModel;
     let mouseX = 0;
     let mouseY = 0;
     let targetRotation = 0;
-    
+
+    // Mouse movement handler
     document.addEventListener('mousemove', (event) => {
       mouseX = (event.clientX / window.innerWidth) * 2 - 1;
       mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
     });
 
-    // Add scroll interaction
+    // Scroll handler
     window.addEventListener('scroll', () => {
       targetRotation = window.scrollY * 0.005;
     });
@@ -141,8 +158,9 @@
       'https://jake875.github.io/A_luxurious_photorea_0701194007_texture.glb',
       (gltf) => {
         const model = gltf.scene;
-        cabinetModel = model; // Store for rotation
+        cabinetModel = model;
         
+        // Center and scale the model
         const box = new THREE.Box3().setFromObject(model);
         const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
@@ -157,30 +175,30 @@
         animate();
       },
       (xhr) => {
-        // Progress callback
-        console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+        // Loading progress
+        console.log(`${(xhr.loaded / xhr.total * 100).toFixed(2)}% loaded`);
       },
       (error) => {
-        console.error('Failed to load model:', error);
-        loading.innerHTML = 'Failed to load cabinet model. Please refresh or check console for errors.';
+        console.error('Error loading model:', error);
+        loading.innerHTML = 'Error loading cabinet. Please check console.';
       }
     );
 
+    // Animation loop
     function animate() {
       requestAnimationFrame(animate);
+      controls.update();
       
-      // Rotate model based on mouse position and scroll
       if (cabinetModel) {
         cabinetModel.rotation.y = mouseX * 0.2 + targetRotation;
         cabinetModel.rotation.x = mouseY * 0.1;
-        
-        // Smooth the scroll rotation
-        targetRotation *= 0.95;
+        targetRotation *= 0.95; // Smooth scroll rotation
       }
       
       renderer.render(scene, camera);
     }
 
+    // Handle window resize
     window.addEventListener('resize', () => {
       const width = window.innerWidth;
       const height = window.innerHeight;
