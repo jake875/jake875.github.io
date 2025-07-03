@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Cabinet Hero</title>
   <style>
     html, body {
@@ -12,6 +12,10 @@
       font-family: 'Georgia', serif;
       background: #121212;
       overflow: hidden;
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
 
     #cabinet-container {
@@ -24,6 +28,7 @@
       display: block;
       width: 100%;
       height: 100%;
+      touch-action: none;
     }
 
     .overlay {
@@ -32,17 +37,18 @@
       left: 5%;
       z-index: 10;
       color: #f4f1ec;
+      pointer-events: none;
     }
 
     .overlay h1 {
-      font-size: 3em;
+      font-size: clamp(1.5rem, 8vw, 3em);
       color: #e9c46a;
       margin: 0;
       text-shadow: 0 0 10px rgba(233,196,106,0.3);
     }
 
     .overlay p {
-      font-size: 1.2em;
+      font-size: clamp(0.9rem, 4vw, 1.2em);
       margin-top: 1em;
       max-width: 400px;
     }
@@ -55,6 +61,7 @@
       text-align: center;
       color: #fff;
       z-index: 20;
+      font-size: clamp(0.9rem, 4vw, 1em);
     }
 
     .spinner {
@@ -70,6 +77,18 @@
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
+    }
+
+    /* Mobile-specific adjustments */
+    @media (max-width: 768px) {
+      .overlay {
+        top: 5%;
+        left: 5%;
+        right: 5%;
+      }
+      .overlay h1 {
+        margin-bottom: 0.5em;
+      }
     }
   </style>
 </head>
@@ -109,47 +128,79 @@
     const loading = document.getElementById('loading');
     const container = document.getElementById('cabinet-container');
 
+    // Detect mobile device
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
     // Renderer setup
     const renderer = new THREE.WebGLRenderer({ 
       canvas, 
       alpha: true, 
-      antialias: true 
+      antialias: true,
+      powerPreference: "high-performance"
     });
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.outputEncoding = THREE.sRGBEncoding;
 
     // Scene setup
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100);
-    camera.position.set(0, 1.5, 4);
+    camera.position.set(0, isMobile ? 1.2 : 1.5, isMobile ? 5 : 4);
 
     // Lighting
-    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    scene.add(new THREE.AmbientLight(0xffffff, isMobile ? 0.8 : 0.6));
+    const directionalLight = new THREE.DirectionalLight(0xffffff, isMobile ? 1.2 : 1);
     directionalLight.position.set(2, 5, 5);
     scene.add(directionalLight);
 
-    // Controls for debugging
+    // Controls - more damped on mobile
     const controls = new OrbitControls(camera, canvas);
     controls.enableDamping = true;
-    controls.dampingFactor = 0.25;
+    controls.dampingFactor = isMobile ? 0.3 : 0.25;
+    controls.enableZoom = !isMobile;
+    controls.screenSpacePanning = true;
 
     // Model interaction variables
     let cabinetModel;
     let mouseX = 0;
     let mouseY = 0;
     let targetRotation = 0;
+    let touchStartX = 0;
+    let touchStartY = 0;
 
-    // More aggressive mouse movement handler
-    document.addEventListener('mousemove', (event) => {
-      mouseX = (event.clientX / window.innerWidth) * 2 - 1;
-      mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
-    });
+    // Mouse movement handler (desktop)
+    if (!isMobile) {
+      document.addEventListener('mousemove', (event) => {
+        mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+        mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+      });
+    }
 
-    // More aggressive scroll handler
+    // Touch handlers (mobile)
+    if (isMobile) {
+      document.addEventListener('touchstart', (event) => {
+        touchStartX = event.touches[0].clientX;
+        touchStartY = event.touches[0].clientY;
+      }, { passive: true });
+
+      document.addEventListener('touchmove', (event) => {
+        event.preventDefault();
+        const touchX = event.touches[0].clientX;
+        const touchY = event.touches[0].clientY;
+        
+        mouseX = (touchX / window.innerWidth) * 2 - 1;
+        mouseY = -(touchY / window.innerHeight) * 2 + 1;
+        
+        // Additional rotation based on movement delta
+        targetRotation += (touchX - touchStartX) * 0.005;
+        touchStartX = touchX;
+        touchStartY = touchY;
+      }, { passive: false });
+    }
+
+    // Scroll handler (less aggressive on mobile)
     window.addEventListener('scroll', () => {
-      targetRotation = window.scrollY * 0.01; // Increased from 0.005 to 0.01
+      targetRotation = window.scrollY * (isMobile ? 0.005 : 0.01);
     });
 
     // Load the GLB model
@@ -160,12 +211,12 @@
         const model = gltf.scene;
         cabinetModel = model;
         
-        // Center and scale the model (25% smaller than original version)
+        // Center and scale the model (smaller on mobile)
         const box = new THREE.Box3().setFromObject(model);
         const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
         const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = (2.5 / maxDim) * 0.75; // 25% smaller (0.75 of original scale)
+        const scale = (isMobile ? 2.0 : 2.5) / maxDim * 0.75; // 25% smaller than original
 
         model.scale.setScalar(scale);
         model.position.sub(center.multiplyScalar(scale));
@@ -184,31 +235,51 @@
       }
     );
 
-    // Animation loop with more aggressive movement
+    // Animation loop with mobile optimizations
     function animate() {
       requestAnimationFrame(animate);
       controls.update();
       
       if (cabinetModel) {
-        // Increased rotation multipliers from 0.2/0.1 to 0.4/0.2 for more aggressive movement
-        cabinetModel.rotation.y = mouseX * 0.4 + targetRotation; // Increased from 0.2
-        cabinetModel.rotation.x = mouseY * 0.2; // Increased from 0.1
+        // Different sensitivity for mobile vs desktop
+        const rotationSensitivity = isMobile ? 0.3 : 0.4;
+        const verticalSensitivity = isMobile ? 0.15 : 0.2;
         
-        // Reduced damping for more responsive movement
-        targetRotation *= 0.9; // Changed from 0.95 for less smoothing
+        cabinetModel.rotation.y = mouseX * rotationSensitivity + targetRotation;
+        cabinetModel.rotation.x = mouseY * verticalSensitivity;
+        
+        // Different damping for mobile
+        targetRotation *= isMobile ? 0.92 : 0.9;
       }
       
       renderer.render(scene, camera);
     }
 
     // Handle window resize
-    window.addEventListener('resize', () => {
+    function handleResize() {
       const width = window.innerWidth;
       const height = window.innerHeight;
       renderer.setSize(width, height);
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
-    });
+      
+      // Adjust camera position for mobile landscape
+      if (isMobile && window.innerWidth > window.innerHeight) {
+        camera.position.z = 6;
+      } else if (isMobile) {
+        camera.position.z = 5;
+      }
+    }
+
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Initial call
+
+    // Prevent touch scroll
+    document.addEventListener('touchmove', function(e) {
+      if (e.target === canvas) {
+        e.preventDefault();
+      }
+    }, { passive: false });
   </script>
 </body>
 </html>
